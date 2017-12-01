@@ -1,0 +1,12 @@
+.eunit
+deps
+*.o
+*.beam
+*.plt
+erl_crash.dump
+ebin/*.beam
+.rebar
+rebar.lock
+_build
+.idea
+*.iml
