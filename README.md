@@ -12,5 +12,11 @@ How to run
 -----
     $ rebar3 shell
     Eshell V8.3 (abort with ^G)
-    1> aoc2017:go().
+    1> aoc2017:go(Day).
+Where Day is day number for the problem you want to see the result from.
+
+You can also run
     
+    1> aoc2017:go(all).
+    
+To see all of the results at once.
