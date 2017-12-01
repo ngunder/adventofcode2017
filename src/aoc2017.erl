@@ -29,6 +29,7 @@ day(all, Num) ->
 day(all) ->
   day(all, 25);
 day(1) ->
-  day1:go();
+  io:format("Day 1 part A: ~w~n", [day1:part_a()]),
+  io:format("Day 1 part B: ~w~n", [day1:part_b()]);
 day(Invalid) ->
   io:format("Day ~w is not valid or has not be completed...~n", [Invalid]).
