@@ -34,5 +34,8 @@ day(1) ->
 day(2) ->
   io:format("Day 2 part A: ~w~n", [day2:part_a()]),
   io:format("Day 2 part B: ~w~n", [day2:part_b()]);
+day(3) ->
+  io:format("Day 3 part A: ~w~n", [day3:part_a()]),
+  io:format("Day 3 part B: ~w~n", [day3:part_b()]);
 day(Invalid) ->
   io:format("Day ~w is not valid or has not be completed...~n", [Invalid]).
