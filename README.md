@@ -1,22 +1,23 @@
 aoc2017
 =====
-My solutions to the 2017 advent of code using Erlang.
+My solutions to the 2017 advent of code using Elixir/Erlang. 
+I started with Erlang and switched to learn Elixir around day 3.
 
-To run, you need Erlang and Rebar3.
+To run, you need to <a href="http://elixir-lang.github.io/install.html">install Elixir</a>
 
 Build
 -----
-    $ rebar3 compile
+    $ mix compile
 
 How to run
 -----
-    $ rebar3 shell
-    Eshell V8.3 (abort with ^G)
-    1> aoc2017:go(Day).
-Where Day is day number for the problem you want to see the result from.
+    $ iex -S mix
+    Interactive Elixir (1.5.2) - press Ctrl+C to exit (type h() ENTER for help)
+    iex(1)> Aoc2017.go day
+Where <i>day</i> is day number for the problem you want to see the result from.
 
 You can also run
     
-    1> aoc2017:go(all).
+    1> Aoc2017.go :all
     
 To see all of the results at once.
