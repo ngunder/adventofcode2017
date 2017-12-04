@@ -28,7 +28,6 @@ defmodule Day4 do
         Enum.group_by(fn(word) -> word end) |>
         Map.to_list |>
         Enum.reduce(true, fn({_k,v}, acc2) -> length(v) === 1 and acc2 end)
-      end) |>
-    IO.inspect(label: "Result")
+      end)
   end
 end
