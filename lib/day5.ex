@@ -41,50 +41,51 @@ defmodule Day5 do
   @doc """
   Part A for Day 4
   """
-  def part_a do
-    instruction_list = File.read!("res/day5.input") |>
-    String.split("\n") |>
+  def common_part(file) do
+    instruction_list = File.read!(file) |>
+      String.split("\n") |>
       Enum.map(&String.to_integer/1)
-    process_instructions(instruction_list, {0,0}, 0, length(instruction_list), false)
+    instruction_length = length(instruction_list)
+    {instruction_length, 0..(instruction_length-1) |> Enum.zip(instruction_list) |> Map.new}
+  end
+
+  def part_a do
+    {instruction_length, instruction_map} = common_part("res/day5.input")
+    process_instructions(instruction_map, {0,0}, 0, instruction_length, false)
   end
 
   @doc """
   Part B for Day 4
   """
   def part_b do
-    instruction_list = File.read!("res/day5.input") |>
-      String.split("\n") |>
-      Enum.map(&String.to_integer/1)
-    process_instructions(instruction_list, {0,0}, 0, length(instruction_list), true)
+    {instruction_length, instruction_map} = common_part("res/day5.input")
+    process_instructions(instruction_map, {0,0}, 0, instruction_length, true)
   end
 
   def test_a do
-    testin = [0, 3, 0, 1, -3]
-    process_instructions(testin, {0,0}, 0, length(testin), false)
+    {instruction_length, instruction_map} = common_part("res/day5_test.input")
+    process_instructions(instruction_map, {0,0}, 0, instruction_length, false)
   end
 
   def test_b do
-    testin = [0, 3, 0, 1, -3]
-    process_instructions(testin, {0,0}, 0, length(testin), true)
+    {instruction_length, instruction_map} = common_part("res/day5_test.input")
+    process_instructions(instruction_map, {0,0}, 0, instruction_length, true)
   end
 
-  def process_instructions(_, {cur_loc,_}, steps, max_size, _)
-      when cur_loc >= max_size or cur_loc < 0 do
-    steps
+  def process_instructions(_, {cur_loc,val}, steps, max_size, _)
+      when cur_loc + val >= max_size or cur_loc + val < 0 do
+    steps + 1
   end
 
-  def process_instructions(instruction_list, {cur_loc, val}, steps, max_size, true)
+  def process_instructions(instruction_map, {cur_loc, val}, steps, max_size, true)
       when val >= 3 do
-    newlist = List.replace_at(instruction_list, cur_loc, val - 1)
-    IO.inspect steps, label: "Current Step"
-    process_instructions(newlist, {cur_loc+val, Enum.at(newlist, cur_loc+val)}, steps+1, max_size, true)
+    newmap = Map.replace(instruction_map, cur_loc, val - 1)
+    process_instructions(newmap, {cur_loc+val, Map.fetch!(newmap, cur_loc+val)}, steps+1, max_size, true)
   end
 
-  def process_instructions(instruction_list, {cur_loc, val}, steps, max_size, bool_part) do
-    newlist=List.replace_at(instruction_list, cur_loc, val + 1)
-    process_instructions(newlist, {cur_loc+val, Enum.at(newlist, cur_loc+val)}, steps+1, max_size, bool_part)
+  def process_instructions(instruction_map, {cur_loc, val}, steps, max_size, bool_part) do
+    newmap = Map.replace(instruction_map, cur_loc, val + 1)
+    process_instructions(newmap, {cur_loc+val, Map.fetch!(newmap, cur_loc+val)}, steps+1, max_size, bool_part)
 
   end
-
-
 end
