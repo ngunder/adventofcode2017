@@ -32,6 +32,10 @@ defmodule Aoc2017 do
     IO.inspect Day4.part_a, label: "Day 4 part A"
     IO.inspect Day4.part_b, label: "Day 4 part B"
   end
+  def do_day(5) do
+    IO.inspect Day5.part_a, label: "Day 5 part A"
+    IO.inspect Day5.part_b, label: "Day 5 part B"
+  end
   def do_day(invalid) do
     IO.inspect invalid, label: "This day is invalid"
   end
