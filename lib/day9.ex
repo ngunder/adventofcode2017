@@ -81,7 +81,7 @@ defmodule Day9 do
     :pass
   end
   def part_b do
-    part_a
+    part_a()
   end
   def test_b do
     0=common_part('<>')
