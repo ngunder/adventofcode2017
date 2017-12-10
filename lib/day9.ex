@@ -59,9 +59,10 @@ defmodule Day9 do
   end
 
   def part_a do
-    File.read!("res/day9.input") |>
-    String.to_charlist |>
+    {a,_b}=File.read!("res/day9.input") |>
+      String.to_charlist |>
       common_part
+    a
   end
   def test do
     {0,0}=common_part('<>')
@@ -81,7 +82,10 @@ defmodule Day9 do
     :pass
   end
   def part_b do
-    part_a()
+    {_a,b}=File.read!("res/day9.input") |>
+      String.to_charlist |>
+      common_part
+    b
   end
   def test_b do
     0=common_part('<>')
