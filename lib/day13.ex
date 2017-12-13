@@ -197,7 +197,8 @@ defmodule Day13 do
   ( ) [S] ... ... [ ] ... [ ]
   [ ] [ ]         [ ]     [ ]
   [S]             [S]     [S]
-                [ ]     [ ]
+                  [ ]     [ ]
+
 
   0   1   2   3   4   5   6
   ( ) [ ] ... ... [ ] ... [ ]
@@ -300,82 +301,60 @@ defmodule Day13 do
   def test_a do
     firewall = parse_file("res/day13_test.input")
     {max_size,_}=Enum.max(firewall)
-    {_,severity}=process_picos(firewall,max_size+1,0,{0,0})
-    severity
+    find_min_delay(0,{firewall, max_size+1}, {0,0}, :severity)
   end
 
   def part_a do
     firewall = parse_file("res/day13.input")
     {max_size,_}=Enum.max(firewall)
-    {_,severity}=process_picos(firewall,max_size+1,0,{0,0})
-    severity
+    find_min_delay(0,{firewall, max_size+1}, {0,0}, :severity)
   end
 
   def test_b do
     firewall = parse_file("res/day13_test.input")
     {max_size,_}=Enum.max(firewall)
-    find_min_delay(0,{firewall, max_size}, {nil,nil})
+    find_min_delay(0,{firewall, max_size+1}, {0,0}, :caught)
   end
 
   def part_b do
     firewall = parse_file("res/day13.input")
     {max_size,_}=Enum.max(firewall)
-    find_min_delay(0,{firewall, max_size}, {nil,nil})
+    find_min_delay(0,{firewall, max_size+1}, {0,0}, :caught)
   end
 
-  defp find_min_delay(delay, _, {caught,_severity}) when caught === 0 do
-    delay
+  defp find_min_delay(_, _, {_caught,severity}, :severity) when severity != 0 do
+    severity
   end
-  defp find_min_delay(delay, {firewall, max_size}, _result) do
-    newfirewall = move_scaners(firewall, [])
-    IO.inspect delay
-    find_min_delay(delay+1,{newfirewall, max_size}, process_picos(newfirewall,max_size+1,0,{0,0}))
+  defp find_min_delay(delay, _, {caught,_}, :caught) when caught === 0 and delay != 0 do
+    delay - 1
   end
-
+  defp find_min_delay(delay, {firewall, max_size}, _result, type) do
+    {_newfirewall, total_collisions, severity} = move_scaners(firewall, delay, [], {0,0})
+    Help.print_dot_every(delay+1000, 200000)
+    find_min_delay(delay+1, {firewall, max_size}, {total_collisions, severity}, type)
+  end
 
   defp parse_file(file) do
     File.read!(file) |>
       String.split("\n") |>
       Enum.map(fn(x) ->
         [a,b] = String.split(x, [":"," "], trim: true)
-        {String.to_integer(a),{String.to_integer(b),:down,1}} end)
+        {String.to_integer(a),{String.to_integer(b), 1}} end)
   end
 
-  defp process_picos(_firewall,maxstep,maxstep,severity) do
-    severity
+  defp move_scaners([], _start_step, acc, {total_collisions, severity}) do
+    {acc, total_collisions, severity}
   end
-  defp process_picos(firewall,maxstep,currentstep,severity) do
-    newseverity=check_collision(firewall, currentstep, severity)
-    newfirewall=move_scaners(firewall, [])
-    process_picos(newfirewall, maxstep, currentstep+1, newseverity)
-  end
-
-  defp move_scaners([], acc) do
-    acc
-  end
-  defp move_scaners([{loc, {current_depth, :up, current_depth}}|t], acc) do
-    move_scaners(t, [{loc, {current_depth, :down, current_depth}}|acc])
-  end
-  defp move_scaners([{loc, {current_depth, :down, current_depth}}|t], acc) do
-    move_scaners(t, [{loc, {current_depth, :up, current_depth-1}}|acc])
-  end
-  defp move_scaners([{loc, {max_depth, :down, current_depth}}|t], acc) do
-    move_scaners(t, [{loc, {max_depth, :down, current_depth+1}}|acc])
-  end
-  defp move_scaners([{loc, {max_depth, :up, 1}}|t], acc) do
-    move_scaners(t, [{loc, {max_depth, :down, 2}}|acc])
-  end
-  defp move_scaners([{loc, {max_depth, :up, current_depth}}|t], acc) do
-    move_scaners(t, [{loc, {max_depth, :up, current_depth-1}}|acc])
-  end
-
-  defp check_collision(firewall, currentstep, {caught,severity}) do
-    {_,{max_depth, _current_dir, current_depth}}=List.keyfind(firewall, currentstep, 0, {0,{0, :down, 0}})
-    case current_depth do
-      1 ->
-        {caught+1,severity + (currentstep*max_depth)}
-      _ ->
-        {caught,severity}
+  defp move_scaners([{loc, {max_depth, _current_depth}}|t], start_step, acc, {total_collisions, severity}) do
+    calculate_depth = rem(start_step+loc, ((max_depth - 1) * 2)) + 1
+    case calculate_depth === 1 do #collision
+       true ->
+         move_scaners(t, start_step,
+           [{loc, {max_depth, calculate_depth}}|acc], {total_collisions+1, severity + (loc * max_depth)})
+         false ->
+           move_scaners(t, start_step,
+             [{loc, {max_depth, calculate_depth}}|acc], {total_collisions, severity})
     end
+
   end
 end

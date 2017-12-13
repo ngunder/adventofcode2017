@@ -89,11 +89,13 @@ defmodule Day5 do
   def process_instructions(instruction_map, {cur_loc, val}, steps, max_size, true)
       when val >= 3 do
     newmap = Map.replace(instruction_map, cur_loc, val - 1)
+    Help.print_dot_every(steps+1000, 1000000)
     process_instructions(newmap, {cur_loc+val, Map.fetch!(newmap, cur_loc+val)}, steps+1, max_size, true)
   end
 
   def process_instructions(instruction_map, {cur_loc, val}, steps, max_size, bool_part) do
     newmap = Map.replace(instruction_map, cur_loc, val + 1)
+    Help.print_dot_every(steps+1000, 1000000)
     process_instructions(newmap, {cur_loc+val, Map.fetch!(newmap, cur_loc+val)}, steps+1, max_size, bool_part)
 
   end
