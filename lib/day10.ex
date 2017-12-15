@@ -134,6 +134,16 @@ defmodule Day10 do
       String.downcase
   end
 
+  def help_day14(inlist) do
+    {_,_,list64} = List.foldl(Enum.to_list(0..63), {0,0,Enum.to_list(0..255)},
+      fn(_current, {pos, skip, list}) ->
+        wrap_hash(Enum.concat(inlist, [17, 31, 73, 47, 23]), list, {pos, skip})
+      end)
+    Enum.chunk_every(list64, 16) |>
+      Enum.map(fn(current_list) -> Enum.reduce(current_list, fn(elm, acc) -> bxor(elm,acc) end) end) |>
+      List.foldr("",fn(x,acc) -> Enum.join([integer_to_bin(x),acc]) end)
+  end
+
   def part_a do
     {_,_,[c1,c2|_]} = common_part_a("res/day10.input") |>
       # last param is {current_pos, skip_size}
@@ -178,6 +188,31 @@ defmodule Day10 do
   end
   defp integer_to_hex(x) do
     Integer.to_charlist(x,16)
+  end
+
+  def integer_to_bin(x) when x < 2 do
+    '0000000'++Integer.to_charlist(x,2)
+  end
+  def integer_to_bin(x) when x < 4 do
+    '000000'++Integer.to_charlist(x,2)
+  end
+  def integer_to_bin(x) when x < 8 do
+    '00000'++Integer.to_charlist(x,2)
+  end
+  def integer_to_bin(x) when x < 16 do
+    '0000'++Integer.to_charlist(x,2)
+  end
+  def integer_to_bin(x) when x < 32 do
+    '000'++Integer.to_charlist(x,2)
+  end
+  def integer_to_bin(x) when x < 64 do
+    '00'++Integer.to_charlist(x,2)
+  end
+  def integer_to_bin(x) when x < 128 do
+    '0'++Integer.to_charlist(x,2)
+  end
+  def integer_to_bin(x) do
+    Integer.to_charlist(x,2)
   end
 
 end
