@@ -126,8 +126,7 @@ defmodule Day15 do
   def test_b do
     test_b(65, 8921, 5000000, 0)
   end
-  def test_b(a, b, 0, count) do
-    IO.inspect {a,b}
+  def test_b(_a, _b, 0, count) do
     count
   end
   def test_b(a,b,loop,count) do

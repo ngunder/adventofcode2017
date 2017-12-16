@@ -65,17 +65,7 @@ defmodule Day14 do
 
   Your puzzle input is hxtvlmkl.
 
-  NOT 3417
   """
-  require Record
-  Record.defrecord :get_next_val, [:caller]
-  Record.defrecord :get_val, [:caller]
-  Record.defrecord :get_nums, [:caller]
-  Record.defrecord :change_val, [:new_val, :caller]
-  Record.defrecord :unreg_val, [:old_val, :caller]
-
-  Record.defrecord :square_state, [:x, :y, val: :default]
-  Record.defrecord :done, []
 
   def part_a do
     test_a('hxtvlmkl')
@@ -98,36 +88,15 @@ defmodule Day14 do
   end
 
   def test_b(string) do
-    hash_list = gen_list_of_hashes(string)
-    for a <- 0..127, do: spawn_map(Enum.at(hash_list, a), {0, a})
-    pid = spawn_link fn -> val_holder(1, []) end
-    :global.register_name(:val_holder, pid)
-    for name <- :global.registered_names(), do: reach_out_process(name)
-    result = length(sync_call(:global.whereis_name(:val_holder), get_nums(caller: self())))
-    for name <- :global.registered_names(), do: async_call(name, done())
-    result
+    hash = gen_list_of_hashes(string)
+    length(Enum.uniq(List.flatten(walk_hash({[], hash, 0}, {0, 0}))))
   end
 
-  defp reach_out_process(:val_holder) do
-  end
-  defp reach_out_process({x, y}) do
-    :timer.sleep(1)
-    pid = :global.whereis_name({x, y})
-    case sync_call(pid, get_val(caller: self())) do
-      {_, :default} ->
-        {
-          {x, y},
-          async_call(pid, change_val(new_val: sync_call(:val_holder, get_next_val(caller: self())), caller: self()))
-        }
-      _something ->
-        {{x, y}, :do_nothing}
-    end
-  end
 
   defp count_bin([], acc) do
     acc
   end
-  defp count_bin([?1 | t], acc) do
+  defp count_bin([?# | t], acc) do
     count_bin(t, acc + 1)
   end
   defp count_bin([_ | t], acc) do
@@ -135,83 +104,66 @@ defmodule Day14 do
   end
 
   defp gen_list_of_hashes(string) do
-    for i <- 0..127, do: String.to_charlist(Day10.help_day14(string ++ '-' ++ Integer.to_charlist(i)))
+    for i <- 0..127, do: hashup(String.to_charlist(Day10.help_day14(string ++ '-' ++ Integer.to_charlist(i))), [])
   end
 
-  def spawn_map([], _) do
-    :done
+  defp hashup([], acc) do
+    Enum.reverse(acc)
   end
-  def spawn_map([?1 | t], {x, y}) do
-    pid = spawn_link fn -> square(square_state(x: x, y: y)) end
-    :global.register_name({x, y}, pid)
-    spawn_map(t, {x + 1, y})
+  defp hashup([?1 | t], acc) do
+    hashup(t, [?# | acc])
   end
-  def spawn_map([?0 | t], {x, y}) do
-    spawn_map(t, {x + 1, y})
+  defp(hashup([?0 | t], acc)) do
+    hashup(t, [?. | acc])
   end
 
-  defp val_holder(val, nums) do
-    receive do
-      get_next_val(caller: caller) ->
-        async_call(caller, val)
-        val_holder(val + 1, [val | nums])
-      unreg_val(old_val: someval) ->
-        IO.inspect someval, label: "remove"
-        val_holder(val, nums -- [someval])
-      get_nums(caller: caller) ->
-        async_call(caller, nums)
-        val_holder(val, nums)
-      done() ->
-        :done
+
+  defp walk_hash({_, hashlist, _}, {127, 127}) do
+    hashlist
+  end
+  defp walk_hash({visited, hashlist, num}, {127, y}) do
+    case check_loc({visited, hashlist, num}, {127, y}) do
+      ?# ->
+        gen_num({visited, hashlist, num + 1}, {127, y})
+        |> walk_hash({0, y + 1})
+      _ ->
+        walk_hash({visited, hashlist, num}, {0, y + 1})
     end
   end
 
-  ## Decided to use processes
-  defp square(ss = square_state(x: x, y: y, val: val)) do
-    receive do
-      get_val(caller: caller) ->
-        async_call(caller, {{x, y}, val})
-        square(ss)
-      change_val(new_val: change_val) ->
-        case change_val < val do
-          true ->
-            case val == :default do
-              false ->
-                async_call(:val_holder, {:unreg_val, val, self()})
-              true ->
-                :ok
-            end
-            async_call({x + 1, y}, change_val(new_val: change_val, caller: self()))
-            async_call({x, y + 1}, change_val(new_val: change_val, caller: self()))
-            async_call({x - 1, y}, change_val(new_val: change_val, caller: self()))
-            async_call({x, y - 1}, change_val(new_val: change_val, caller: self()))
-            square(square_state(ss, val: change_val))
-          _ ->
-            square(ss)
-        end
-      done() ->
-        :done
+  defp walk_hash({visited, hashlist, num}, {x, y}) do
+    case check_loc({visited, hashlist, num}, {x, y}) do
+      ?# ->
+        gen_num({visited, hashlist, num + 1}, {x, y})
+        |> walk_hash({x + 1, y})
+      _ ->
+        walk_hash({visited, hashlist, num}, {x + 1, y})
     end
   end
 
-
-  def async_call(target, msg) when is_pid(target) do
-    send target, msg
-  end
-  def async_call(target, msg) do
-    case :global.whereis_name(target) do
-      :undefined ->
-        :fail
-      pid ->
-        send pid, msg
+  defp gen_num({visited, hashlist, num}, {x, y}) when 128 > x and x >= 0 and 128 > y and y >= 0 do
+    case {{x, y} in visited, check_loc({visited, hashlist, num}, {x, y})} do
+      {false, ?#} ->
+        {[{x, y} | visited], hashlist, num}
+        |> change_loc({x, y})
+        |> gen_num({x + 1, y})
+        |> gen_num({x - 1, y})
+        |> gen_num({x, y + 1})
+        |> gen_num({x, y - 1})
+      _ ->
+        {visited, hashlist, num}
     end
   end
+  defp gen_num({visited, hashlist, num}, _) do
+    {visited, hashlist, num}
+  end
 
-  def sync_call(target, msg) do
-    async_call(target, msg)
-    receive do
-      msg ->
-        msg
-    end
+  def check_loc({_, hashlist, _}, {x, y}) do
+    Enum.at(hashlist, y)
+    |> Enum.at(x)
+  end
+
+  def change_loc({visited, hashlist, val}, {x, y}) do
+    {visited, List.replace_at(hashlist, y, List.replace_at(Enum.at(hashlist, y), x, val)), val}
   end
 end
