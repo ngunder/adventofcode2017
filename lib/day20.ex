@@ -1,5 +1,5 @@
 defmodule PState do
-   defstruct p: {nil,nil,nil}, v: {nil,nil,nil}, a: {nil,nil,nil}, bosspid: nil, id: nil
+  defstruct p: {nil, nil, nil}, v: {nil, nil, nil}, a: {nil, nil, nil}, bosspid: nil, id: nil
 end
 
 defmodule Day20 do
@@ -72,53 +72,62 @@ defmodule Day20 do
   ------destroyed by collision------    -6 -5 -4 -3 -2 -1  0  1  2  3
   ------destroyed by collision------                      (3)
   p=< 0,0,0>, v=<-1,0,0>, a=< 0,0,0>
+
   In this example, particles 0, 1, and 2 are simultaneously destroyed at the time and place marked X. On the next tick,
   particle 3 passes through unharmed.
 
   How many particles are left after all collisions are resolved?
   """
 
-  defp common(file) do
-
-      {proclist, _}=File.read!(file) |>
-        String.split("\n") |>
-        List.foldl({[],0}, fn(p, {t,acc}) -> {[parse(p, acc, self())|t], acc + 1}
-        end)
-      indexed=Enum.with_index(proclist)
-      send(self(), {:proclist, indexed})
-      boss([])
-    end
+  defp common(file, type) do
+    {proclist, _i} = File.read!(file)
+                    |> String.split("\n")
+                    |> List.foldl(
+                         {[], 0},
+                         fn (p, {t, acc}) -> {[parse(p, acc, self()) | t], acc + 1}
+                         end
+                       )
+    indexed = Enum.with_index(Enum.reverse(proclist))
+    send(self(), {:proclist, indexed})
+    boss([], type)
+  end
   def test_a do
-    common("res/day20_test.input")
+    common("res/day20_test_a.input", :normal)
+  end
+  def test_b do
+    common("res/day20_test_b.input", :collide)
   end
   def part_a do
-    common("res/day20.input")
+    common("res/day20.input", :normal)
+  end
+  def part_b do
+    common("res/day20.input", :collide)
   end
 
   defp parse(p, i, bosspid) do
-    String.split(p, ["p=<", "v=<","a=<"," ", ">", ">, "], trim: true) |>
-      process_points() |>
-      spawn_points(i, bosspid)
+    String.split(p, ["p=<", "v=<", "a=<", " ", ">", ">, "], trim: true)
+    |> process_points()
+    |> spawn_points(i, bosspid)
   end
 
   defp spawn_points({p, v, a}, i, bosspid) do
     spawn(Day20, :particle, [%PState{p: p, v: v, a: a, id: i, bosspid: bosspid}])
   end
 
-  defp process_points([a,b,c]) do
-    p=String.split(a, ",") |>
-      convert_point()
-    v=String.split(b, ",") |>
-      convert_point()
-    a=String.split(c, ",") |>
-      convert_point()
-    {p,v,a}
+  defp process_points([a, b, c]) do
+    p = String.split(a, ",")
+        |> convert_point()
+    v = String.split(b, ",")
+        |> convert_point()
+    a = String.split(c, ",")
+        |> convert_point()
+    {p, v, a}
   end
 
-  defp convert_point([a,b,c]) do
+  defp convert_point([a, b, c]) do
     {String.to_integer(a), String.to_integer(b), String.to_integer(c)}
   end
-############################### Particle process
+  ############################### Particle process
   def particle(pstate) do
     send(pstate.bosspid, {:started, pstate.id})
     receive do
@@ -130,9 +139,9 @@ defmodule Day20 do
   end
 
   def particle__started(pstate) do
-    {px,py,pz}=pstate.p
-    {vx,vy,vz}=pstate.v
-    {ax,ay,az}=pstate.a
+    {px, py, pz} = pstate.p
+    {vx, vy, vz} = pstate.v
+    {ax, ay, az} = pstate.a
 
     #Increase the X velocity by the X acceleration.
     vx = vx + ax
@@ -146,50 +155,96 @@ defmodule Day20 do
     py = py + vy
     #Increase the Z position by the Z velocity.
     pz = pz + vz
-
     send(pstate.bosspid, {:loc, pstate.id, self(), {px, py, pz}})
     receive do
       :tick ->
-         particle__started(%{pstate|p: {px, py, pz}, v: {vx, vy, vz}})
+        particle__started(%{pstate | p: {px, py, pz}, v: {vx, vy, vz}})
+      :stop ->
+        :ok
     end
   end
   ############################### Boss process
-  def boss([]) do
+
+  def boss([], type) do
     ## Wait for all of the procs to start
     receive do
       {:proclist, proclist} ->
-        boss__wait_for_proc_starts(proclist, proclist)
+        boss__wait_for_proc_starts(proclist, proclist, type)
     end
   end
 
-  defp boss__wait_for_proc_starts([], proclist) do
-    boss__tick(proclist, 0)
+  defp boss__wait_for_proc_starts([], proclist, type) do
+    boss__tick(proclist, 0, type)
   end
-  defp boss__wait_for_proc_starts(procs, proclist) do
+  defp boss__wait_for_proc_starts(procs, proclist, type) do
     receive do
       {:started, id} ->
-        boss__wait_for_proc_starts(List.keydelete(procs, id, 1), proclist)
+        boss__wait_for_proc_starts(List.keydelete(procs, id, 1), proclist, type)
     end
   end
-  defp boss__tick(proclist, count) do
-    for {proc,_id} <- proclist, do: send(proc, :tick)
-    boss__grab(proclist, proclist, [], count)
+  defp boss__tick(proclist, count, type) do
+    for {proc, _id} <- proclist, do: send(proc, :tick)
+    boss__grab(proclist, proclist, [], count, type)
   end
-  defp boss__grab([], proclist, results, 500) do
-    for {proc,_id} <- proclist, do: send(proc, :stop)
-    {closest, _} = hd(List.keysort(results,1))
-    closest
+  defp boss__grab([], proclist, results, 500, :collide) do
+    for {proc, _id} <- proclist, do: send(proc, :stop)
+    length(List.keysort(results, 1))
   end
-  defp boss__grab([], proclist, _results, count) do
-    boss__tick(proclist, count + 1)
+  defp boss__grab([], proclist, results, 500, :normal) do
+    for {proc, _id} <- proclist, do: send(proc, :stop)
+    {{_pid, id}, _} = hd(List.keysort(results, 1))
+    id
   end
-  defp boss__grab(procs, proclist, results, count) do
+  defp boss__grab([], proclist, results, count, :collide) do
+    ids = remove_collisions(results, [])
+    newproclist=remove_ids(proclist, ids)
+    boss__tick(newproclist, count + 1, :collide)
+  end
+  defp boss__grab([], proclist, _results, count, type) do
+    boss__tick(proclist, count + 1, type)
+  end
+  defp boss__grab(procs, proclist, results, count, :collide) do
     receive do
       {:loc, id, pid, {px, py, pz}} ->
-        boss__grab(List.keydelete(procs, pid, 0), proclist, [{id, abs(px)+abs(py)+abs(pz)}|results], count)
+        boss__grab(List.keydelete(procs, pid, 0), proclist, [{{pid, id}, {px, py, pz}} | results], count, :collide)
+    end
+  end
+  defp boss__grab(procs, proclist, results, count, :normal) do
+    receive do
+      {:loc, id, pid, {px, py, pz}} ->
+        boss__grab(List.keydelete(procs, pid, 0), proclist, [{{pid, id}, abs(px) + abs(py) + abs(pz)} | results], count,
+          :normal)
     end
   end
 
+  defp remove_collisions([], acc) do
+    acc
+  end
+  defp remove_collisions([x={{_pid, _id}, xyz} | rest], acc) do
+    if List.keymember?(rest, xyz, 1) do
+      {removed, newlist} = delete_all(xyz, [x | rest], [], [])
+      remove_collisions(newlist, removed++acc)
+    else
+      remove_collisions(rest, acc)
+    end
+  end
 
+  defp delete_all(_item, [], newlist, removed) do
+    {removed, newlist}
+  end
+  defp delete_all(xyz, [{{pid, id}, xyz}|t], newlist, removed) do
+    send(pid, :stop)
+    delete_all(xyz, t, newlist, [id|removed])
+  end
+  defp delete_all(xyz, [other|t], newlist, removed) do
+    delete_all(xyz, t, [other|newlist], removed)
+  end
+
+  defp remove_ids(proclist, []) do
+    proclist
+  end
+  defp remove_ids(proclist, [id1|rest]) do
+    remove_ids(List.keydelete(proclist, id1, 1), rest)
+  end
 
 end
